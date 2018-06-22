@@ -1,0 +1,60 @@
+//The Maven plugin adds support for deploying artifacts to Maven repositories.
+apply plugin: "maven"
+
+uploadArchives {
+    repositories.mavenDeployer {
+        ////配置jar的GAV坐标
+        //pom.groupId = "com.jadyer.demo.sdk"
+        //pom.artifactId = "demo-sdk"
+        //pom.version = "1.0.0"
+        ////配置jar的pom.xml里面各个内容
+        //pom.project {
+        //    name project.name
+        //    packaging 'jar'
+        //    description 'Demo应用的SDK服务jar包'
+        //    url 'https://jadyer.cn/'
+        //    scm {
+        //        url 'https://github.com/'
+        //        connection 'https://github.com/jadyer'
+        //        developerConnection 'https://github.com/v5java/demo-gradle-app'
+        //    }
+        //    licenses {
+        //        license {
+        //            name 'Apache License Version 2.0'
+        //            url 'https://github.com/v5java/demo-gradle-app/blob/master/LICENSE'
+        //            distribution 'Apache License Version 2.0'
+        //        }
+        //    }
+        //    developers {
+        //        developer {
+        //            id 'Jadyer'
+        //            name '玄玉'
+        //        }
+        //    }
+        //}
+        def REPO_URL = demoReleaseRepository
+        if(project.version.toString().contains("SNAPSHOT")){
+            REPO_URL = demoSnapshotRepository
+        }
+        repository(url: REPO_URL) {
+            authentication(userName: NEXUS_USERNAME, password: NEXUS_PASSWORD)
+        }
+    }
+}
+
+/*
+ * 打包源文件
+ */
+task sourcesJar(type: Jar) {
+    //定义一个标志（生成的jar包后面加上sources，比如seed-comm-1.1-sources.jar）
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+/*
+ * 产生相关配置文件的任务
+ */
+artifacts {
+    archives jar
+    archives sourcesJar
+}

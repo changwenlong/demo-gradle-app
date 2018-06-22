@@ -1,0 +1,18 @@
+server:
+  port: 8000
+
+
+spring:
+  http:
+    multipart:
+      location: ${upload.tmp.basePath}
+      maxFileSize: 10MB
+
+
+logging:
+  path: /home/demo/logs/demo-gradle-app
+  config: classpath:logback-demo-gradle-app.xml
+
+
+jasypt:
+  file: classpath:config.properties

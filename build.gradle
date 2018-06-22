@@ -1,0 +1,213 @@
+import org.springframework.core.SpringVersion
+
+/*
+ * 设置脚本的运行环境：声明Gradle脚本自身需要使用的资源（包括依赖项、第三方插件、maven仓库地址）
+ */
+buildscript {
+    repositories {
+        mavenLocal()
+        maven {url demoRepository}
+        maven {url demoReleaseRepository}
+        maven {url demoSnapshotRepository}
+        mavenCentral()
+        jcenter()
+    }
+    repositories.each {
+        println it.getUrl()
+    }
+    //指明在执行其余的build脚本时，classloader可以使用该依赖项
+    dependencies {
+        classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.6.2"
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}"
+    }
+}
+
+//configurations.all {
+//    ////每隔24小时检查远程依赖（即：SNAPSHOT(changing)）是否存在更新
+//    //resolutionStrategy.cacheChangingModulesFor 24, 'hours'
+//    ////采用动态版本声明的依赖（即：“+号(dynamic)版本”）缓存20分钟
+//    //resolutionStrategy.cacheDynamicVersionsFor 10*2, 'minutes'
+//    ////check for updates every build
+//    //resolutionStrategy.cacheDynamicVersionsFor 0, 'seconds'
+//    //resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+//    ////修改默认策略：版本冲突则构建失败（否则默认会使用最新版本来解决版本冲突）
+//    //resolutionStrategy.failOnVersionConflict()
+//    resolutionStrategy {
+//        //修改默认策略：版本冲突则构建失败（否则默认会使用最新版本来解决版本冲突）
+//        failOnVersionConflict()
+//        //force certain versions of dependencies (including transitive)
+//        force (
+//                "commons-io:commons-io:${commonsIOVersion}",
+//                "org.apache.commons:commons-lang3:${commonsLang3Version}",
+//                "org.codehaus.jettison:jettison:1.3.7",
+//                "net.bytebuddy:byte-buddy:1.8.11"
+//        )
+//    }
+//}
+
+/*
+ * 项目的全局配置
+ */
+allprojects {
+    //统一版本号及GroupName
+    group 'com.jadyer.demo'
+    version = VERSION_NAME
+    //设置全局编译配置
+    tasks.withType(JavaCompile) {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+        options.encoding = "UTF-8"
+        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+    }
+    ////作用等效于上面的options.compilerArgs配置
+    ////显示警告的详细信息（比如未经检查或不安全的操作、过时API等等）
+    ////注意：第二次编译打包前，要先clean一下再bootRepackage，否则不会显示警告的详细信息
+    //gradle.projectsEvaluated {
+    //    tasks.withType(JavaCompile) {
+    //        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+    //    }
+    //}
+    //声明项目自身需要的资源，比如依赖项、仓库地址等
+    repositories {
+        mavenLocal()
+        maven {url demoRepository}
+        maven {url demoReleaseRepository}
+        maven {url demoSnapshotRepository}
+        mavenCentral()
+        jcenter()
+    }
+}
+
+/*
+ * 所有子模块都应用这些插件和配置
+ */
+subprojects {
+    apply plugin: 'idea'
+    //该插件提供了Java构建和测试所需的一切（apply是一个方法，plugin是参数，值为'java'）
+    apply plugin: 'java'
+    //使用SpringBootGradle插件（The plugin id 'spring-boot' is deprecated）
+    apply plugin: 'org.springframework.boot'
+    //应用pmd插件（阿里巴巴Java开发规约插件所需）
+    apply plugin: 'pmd'
+    pmd {
+        //每次都先clean再重新检查
+        pmdMain.dependsOn clean
+        pmdTest.enabled = false
+        //开启忽略错误继续构建
+        ignoreFailures  = true
+        //控制台打印检查结果
+        consoleOutput   = true
+        //应用的检查规则
+        ruleSets = [
+                "java-ali-comment",
+                "java-ali-concurrent",
+                "java-ali-constant",
+                "java-ali-exception",
+                "java-ali-flowcontrol",
+                "java-ali-naming",
+                "java-ali-oop",
+                "java-ali-orm",
+                "java-ali-other",
+                "java-ali-set"
+        ]
+    }
+    //task.withType用于对每种任务进行配置
+    tasks.withType(Pmd) {
+        reports {
+            xml.enabled  = false
+            html.enabled = true
+        }
+    }
+    jar {
+        manifest.attributes version            : version
+        manifest.attributes SpringBootVersion  : springBootVersion
+        manifest.attributes SpringCloudVersion : springCloudVersion
+        manifest.attributes SpringVersion      : SpringVersion.version
+        manifest.attributes "Implementation"   : "Gradle." + gradle.gradleVersion
+    }
+    //configurations {
+    //    all*.exclude group: 'org.antlr', module: 'antlr-runtime'
+    //    all*.exclude group: 'org.antlr', module: 'antlr4-annotations'
+    //    all*.exclude group: 'commons-logging', module: 'commons-logging'
+    //}
+    dependencies {
+        pmd "com.alibaba.p3c:p3c-pmd:${alibabaP3CVersion}"
+        testCompile "org.springframework.boot:spring-boot-starter-test"
+    }
+    dependencyManagement {
+        imports {
+            //mavenBom "org.springframework.cloud:spring-cloud-dependencies:" + springCloudVersion
+            mavenBom "org.springframework.boot:spring-boot-dependencies:${springBootVersion}"
+            mavenBom "org.springframework.boot:spring-boot-starter-parent:${springBootVersion}"
+        }
+    }
+}
+
+/*
+ * 为具体模块定义特定行为（其实就是将具体模板下的build.gradle文件内容，写在这里而已）
+ */
+project(':demo-gradle-app-web') {
+    dependencies {
+        compile project (":demo-gradle-app-comm")
+    }
+}
+project(':demo-gradle-app-comm') {
+    dependencies {
+        compile project (":demo-gradle-app-sdk")
+        compile "org.apache.commons:commons-text:${commonsTextVersion}"
+        compile "commons-fileupload:commons-fileupload:${commonsFileuploadVersion}"
+        compile "com.ibeetl:beetl:${beetlVersion}"
+        compile "redis.clients:jedis:${jedisVersion}"
+        compile "org.codehaus.janino:janino:${janinoVersion}"
+        compile "org.jasypt:jasypt:${jasyptVersion}"
+        compile "org.redisson:redisson:${redissonVersion}"
+        compile "com.alibaba:fastjson:${fastjsonVersion}"
+        compile "mysql:mysql-connector-java:${mysqlDriverVersion}"
+        compile "com.alibaba:druid-spring-boot-starter:${druidBootVersion}"
+        compile "org.springframework.boot:spring-boot-starter-aop"
+        compile "org.springframework.boot:spring-boot-starter-web"
+        compile "org.springframework.boot:spring-boot-starter-actuator"
+        compile "org.springframework.boot:spring-boot-starter-data-jpa"
+        //compile "org.springframework.cloud:spring-cloud-starter-feign"
+        //compile "org.springframework.cloud:spring-cloud-starter-config"
+        //compile "org.springframework.cloud:spring-cloud-starter-sleuth"
+        //compile "org.springframework.cloud:spring-cloud-starter-netflix-eureka-client"
+        //compile "com.jadyer.seed:seed-boot:${seedBootVersion}"
+        //compile ("com.jadyer.seed:seed-comm:${seedCommVersion}"){
+        //    transitive=false
+        //}
+    }
+}
+project(':demo-gradle-app-sdk') {
+    dependencies {
+        compileOnly ("org.springframework:spring-web") {
+            exclude module: 'spring-aop'
+            exclude module: 'spring-beans'
+            exclude module: 'spring-context'
+        }
+        compileOnly "com.alibaba:fastjson:${fastjsonVersion}"
+        compileOnly "org.hibernate:hibernate-validator"
+        //compileOnly "org.springframework.cloud:spring-cloud-starter-feign"
+        compileOnly "org.springframework.boot:spring-boot-starter-data-jpa"
+        compile "commons-io:commons-io:${commonsIOVersion}"
+        compile "commons-codec:commons-codec:${commonsCodecVersion}"
+        compile "org.apache.commons:commons-lang3:${commonsLang3Version}"
+        compile "org.apache.httpcomponents:httpmime:${httpclientVersion}"
+        compile "org.apache.httpcomponents:fluent-hc:${httpclientVersion}"
+        compile "org.apache.httpcomponents:httpclient-cache:${httpclientVersion}"
+    }
+}
+
+/*
+ * 取消构建过程中的不相干任务
+ * ---------------------------------------------
+ * tasks会获取当前project中所有的task
+ * enabled属性控制任务开关
+ * whenTaskAdded后面的闭包会在gradle配置阶段完成
+ * ---------------------------------------------
+ */
+tasks.whenTaskAdded { task ->
+    if(task.name.contains('Test') || task.name.contains('Mock')){
+        task.enabled = false
+    }
+}

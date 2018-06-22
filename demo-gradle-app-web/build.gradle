@@ -1,0 +1,21 @@
+//import javax.swing.filechooser.FileSystemView
+//
+//bootRepackage.enabled = true
+//bootRepackage {
+//    withJarTask = jar
+//    version = ""
+//}
+//
+///*
+// * 打包并重命名为demo-gradle-app.jar，然后将其拷贝到桌面
+// */
+//task repackageAndCopyToDesktopJar(type: Copy, dependsOn: ":${project.name}:bootRepackage"){
+//    from 'build/libs/'
+//    into 'build/libs/'
+//    rename { String fileName ->
+//        fileName.replace("demo-gradle-app-web.jar", "demo-gradle-app.jar")
+//    }
+//    exclude '**/*.original'
+//    from 'build/libs/'
+//    into FileSystemView.getFileSystemView().getHomeDirectory().getPath() + System.getProperty("file.separator")
+//}
