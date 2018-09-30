@@ -3,9 +3,8 @@ server:
 
 
 spring:
-  http:
+  servlet:
     multipart:
-      location: ${upload.tmp.basePath}
       maxFileSize: 10MB
 
 
